@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import type { Vacation } from "@/lib/types";
 import { ErrorState, isRateLimitError } from "@/components/ui/error-state";
 
+import { cn } from "@/lib/utils";
 export default function CalendarPage() {
   const {
     currentDate,
@@ -51,6 +52,13 @@ export default function CalendarPage() {
 
   const error = vacationsError || teamError;
   const cancelMutation = useCancelVacation();
+
+  // 크게 보기 모드 상태
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const toggleExpand = useCallback(() => {
+    setIsExpanded((prev) => !prev);
+  }, []);
 
   // 상세 모달 상태
   const [selectedVacation, setSelectedVacation] = useState<Vacation | null>(
@@ -119,13 +127,20 @@ export default function CalendarPage() {
     : undefined;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
-      <CalendarHeader
-        monthLabel={monthLabel}
-        onPrevMonth={goToPrevMonth}
-        onNextMonth={goToNextMonth}
+    <div
+      className={cn(
+        "mx-auto space-y-4 px-4 py-6 transition-all duration-300",
+        isExpanded ? "max-w-full" : "max-w-5xl"
+      )}
+    >
+<CalendarHeader
+monthLabel={monthLabel}
+onPrevMonth={goToPrevMonth}
+onNextMonth={goToNextMonth}
         onToday={goToToday}
-      />
+        isExpanded={isExpanded}
+        onToggleExpand={toggleExpand}
+/>
 
       {error && !isLoading ? (
         <ErrorState
