@@ -1,18 +1,30 @@
 "use client";
 
-import { useMemo } from "react";
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { useMemo, useState, useCallback } from "react";
+import { toast } from "sonner";
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, compareAsc } from "date-fns";
 import { useSession } from "next-auth/react";
 
-import { useVacations } from "@/hooks/use-vacations";
+import { useVacations, useCancelVacation } from "@/hooks/use-vacations";
 import { useTeam } from "@/hooks/use-team";
 import { TodaySummary } from "@/components/dashboard/today-summary";
 import { VacationCard } from "@/components/dashboard/vacation-card";
 import { UpcomingList } from "@/components/dashboard/upcoming-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState, isRateLimitError } from "@/components/ui/error-state";
+import { VacationForm } from "@/components/vacation/vacation-form";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import type { Vacation } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Palmtree } from "lucide-react";
+import { Palmtree, CalendarCheck, Pencil, Trash2 } from "lucide-react";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -33,6 +45,49 @@ export default function DashboardPage() {
   const isLoading = vacationsLoading || teamLoading;
 
   const error = vacationsError || teamError;
+  const cancelMutation = useCancelVacation();
+
+  // 수정 모달 상태
+  const [editVacation, setEditVacation] = useState<Vacation | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+
+  // 취소 확인 다이얼로그 상태
+  const [cancelTarget, setCancelTarget] = useState<Vacation | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+
+  const handleEdit = useCallback((vacation: Vacation) => {
+    setEditVacation(vacation);
+    setEditOpen(true);
+  }, []);
+
+  const handleEditComplete = useCallback(() => {
+    setEditOpen(false);
+    setEditVacation(null);
+  }, []);
+
+  const handleCancelRequest = useCallback((vacation: Vacation) => {
+    setCancelTarget(vacation);
+    setCancelDialogOpen(true);
+  }, []);
+
+  const handleCancelConfirm = useCallback(() => {
+    if (!cancelTarget) return;
+    cancelMutation.mutate(cancelTarget.id, {
+      onSuccess: () => {
+        toast.success("휴가가 취소되었습니다");
+        setCancelDialogOpen(false);
+        setCancelTarget(null);
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "휴가 취소에 실패했습니다"
+        );
+      },
+    });
+  }, [cancelTarget, cancelMutation]);
+
   // 오늘 휴가자 필터
   const todayVacations = useMemo(() => {
     if (!vacations) return [];
@@ -49,6 +104,14 @@ export default function DashboardPage() {
       );
     });
   }, [vacations]);
+  // 내 휴가 필터
+  const myVacations = useMemo(() => {
+    if (!vacations || !session?.user?.githubId) return [];
+    return vacations
+      .filter((v) => v.githubId === session.user?.githubId)
+      .sort((a, b) => compareAsc(parseISO(a.startDate), parseISO(b.startDate)));
+  }, [vacations, session]);
+
 
   const getMember = (githubId: string) =>
     teamConfig?.members.find((m) => m.githubId === githubId);
@@ -148,6 +211,123 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* 내 휴가 섹션 */}
+      {!error && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarCheck className="h-4 w-4" />
+              내 휴가
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            ) : myVacations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="font-medium text-muted-foreground">등록된 휴가가 없습니다</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {myVacations.map((vacation) => {
+                  const type = getVacationType(vacation.type);
+                  return (
+                    <div
+                      key={vacation.id}
+                      className="flex flex-col justify-between gap-4 rounded-lg border p-4 sm:flex-row sm:items-center"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: type?.color ?? "#gray" }}
+                          />
+                          <span className="font-medium">
+                            {type?.label ?? vacation.type}
+                          </span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {vacation.startDate === vacation.endDate
+                            ? vacation.startDate
+                            : `${vacation.startDate} ~ ${vacation.endDate}`}
+                        </div>
+                        {vacation.reason && (
+                          <div className="text-xs text-muted-foreground">
+                            {vacation.reason}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(vacation)}
+                          className="h-8 gap-1"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          <span className="sr-only sm:not-sr-only">수정</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCancelRequest(vacation)}
+                          className="h-8 gap-1 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span className="sr-only sm:not-sr-only">취소</span>
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 수정 모달 */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <VacationForm
+            editVacation={editVacation}
+            onComplete={handleEditComplete}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* 취소 확인 다이얼로그 */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>휴가 취소</DialogTitle>
+            <DialogDescription>
+              선택한 휴가를 취소하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCancelDialogOpen(false)}
+            >
+              닫기
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleCancelConfirm}
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending ? "취소 중..." : "휴가 취소"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
