@@ -145,7 +145,7 @@ export function VacationDetail({
                 size="sm"
                 onClick={() => onEdit(vacation)}
               >
-                수정
+                휴가 수정
               </Button>
             )}
             {onCancel && (
@@ -154,7 +154,7 @@ export function VacationDetail({
                 size="sm"
                 onClick={() => onCancel(vacation)}
               >
-                취소
+                휴가 취소
               </Button>
             )}
           </DialogFooter>
