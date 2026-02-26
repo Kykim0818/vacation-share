@@ -15,6 +15,7 @@ import {
 import { CalendarCell, type VacationBar } from "./calendar-cell";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Vacation, Member, VacationType } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -203,8 +204,6 @@ export function CalendarGrid({
               isExpanded ? "h-10 text-sm" : "h-8 text-xs",
               i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-muted-foreground"
             )}
-              i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-muted-foreground"
-            }`}
           >
             {label}
           </div>
