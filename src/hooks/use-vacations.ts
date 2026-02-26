@@ -102,8 +102,14 @@ export function useCreateVacation() {
 
   return useMutation({
     mutationFn: postVacation,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
+    onSuccess: (newVacation) => {
+      // 캐시에 새 휴가 직접 추가 (모든 월별 쿼리에)
+      queryClient.setQueriesData<Vacation[]>(
+        { queryKey: [QUERY_KEYS.VACATIONS] },
+        (old) => (old ? [...old, newVacation] : [newVacation])
+      );
+      // background refetch로 최종 동기화
+      queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.VACATIONS],
       });
     },
@@ -119,8 +125,16 @@ export function useUpdateVacation() {
 
   return useMutation({
     mutationFn: patchVacation,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
+    onSuccess: (updatedVacation) => {
+      // 캐시 내 해당 휴가를 응답 데이터로 교체
+      queryClient.setQueriesData<Vacation[]>(
+        { queryKey: [QUERY_KEYS.VACATIONS] },
+        (old) =>
+          old?.map((v) =>
+            v.id === updatedVacation.id ? updatedVacation : v
+          ) ?? []
+      );
+      queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.VACATIONS],
       });
     },
@@ -136,8 +150,13 @@ export function useCancelVacation() {
 
   return useMutation({
     mutationFn: deleteVacation,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
+    onSuccess: (_data, deletedId) => {
+      // 캐시에서 해당 휴가 제거
+      queryClient.setQueriesData<Vacation[]>(
+        { queryKey: [QUERY_KEYS.VACATIONS] },
+        (old) => old?.filter((v) => v.id !== deletedId) ?? []
+      );
+      queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.VACATIONS],
       });
     },
