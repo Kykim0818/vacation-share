@@ -1,0 +1,73 @@
+{
+  "repository": {
+    "owner": "Kykim8180",
+    "repo": "vacation-data"
+  },
+  "members": [
+    {
+      "githubId": "Kykim8180",
+      "name": "김기영",
+      "team": "ASW팀",
+      "color": "#3B82F6",
+      "role": "admin"
+    },
+    {
+      "githubId": "LeeJoongHyeok",
+      "name": "이중혁",
+      "team": "ASW팀",
+      "color": "#EF4444",
+      "role": "member"
+    },
+    {
+      "githubId": "Hunseok-Choi",
+      "name": "최훈석",
+      "team": "디자인팀",
+      "color": "#10B981",
+      "role": "member"
+    }
+  ],
+  "vacationTypes": [
+    {
+      "key": "annual",
+      "label": "연차",
+      "labelName": "vacation/연차",
+      "color": "#10B981"
+    },
+    {
+      "key": "am-half",
+      "label": "오전 반차",
+      "labelName": "vacation/오전반차",
+      "color": "#F59E0B"
+    },
+    {
+      "key": "pm-half",
+      "label": "오후 반차",
+      "labelName": "vacation/오후반차",
+      "color": "#F59E0B"
+    },
+    {
+      "key": "am-quarter",
+      "label": "오전 반반차",
+      "labelName": "vacation/오전반반차",
+      "color": "#FBBF24"
+    },
+    {
+      "key": "pm-quarter",
+      "label": "오후 반반차",
+      "labelName": "vacation/오후반반차",
+      "color": "#FBBF24"
+    },
+    {
+      "key": "care",
+      "label": "돌봄",
+      "labelName": "vacation/돌봄",
+      "color": "#EC4899"
+    },
+    {
+      "key": "other",
+      "label": "기타 휴가",
+      "labelName": "vacation/기타",
+      "color": "#6B7280"
+    }
+  ]
+}
