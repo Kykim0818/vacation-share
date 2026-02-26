@@ -96,22 +96,20 @@ export default function CalendarPage() {
     setCancelDialogOpen(true);
   }, []);
 
-  const handleCancelConfirm = useCallback(() => {
+  const handleCancelConfirm = useCallback(async () => {
     if (!cancelTarget) return;
-    cancelMutation.mutate(cancelTarget.id, {
-      onSuccess: () => {
-        toast.success("휴가가 취소되었습니다");
-        setCancelDialogOpen(false);
-        setCancelTarget(null);
-      },
-      onError: (error) => {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "휴가 취소에 실패했습니다"
-        );
-      },
-    });
+    try {
+      await cancelMutation.mutateAsync(cancelTarget.id);
+      toast.success("휴가가 취소되었습니다");
+      setCancelDialogOpen(false);
+      setCancelTarget(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "휴가 취소에 실패했습니다"
+      );
+    }
   }, [cancelTarget, cancelMutation]);
 
   const selectedMember = selectedVacation
@@ -130,7 +128,7 @@ export default function CalendarPage() {
     <div
       className={cn(
         "mx-auto space-y-4 px-4 py-6 transition-all duration-300",
-        isExpanded ? "max-w-full" : "max-w-5xl"
+        isExpanded ? "max-w-[80vw]" : "max-w-5xl"
       )}
     >
 <CalendarHeader
@@ -159,6 +157,7 @@ onNextMonth={goToNextMonth}
           members={teamConfig?.members}
           vacationTypes={teamConfig?.vacationTypes}
           isLoading={isLoading}
+          isExpanded={isExpanded}
           onVacationClick={handleVacationClick}
         />
       )}

@@ -89,10 +89,10 @@ export function VacationForm({ editVacation, onComplete }: VacationFormProps) {
 
     if (!validate()) return;
 
-    if (isEditMode && editVacation) {
-      // 수정
-      updateMutation.mutate(
-        {
+    try {
+      if (isEditMode && editVacation) {
+        // 수정
+        await updateMutation.mutateAsync({
           id: editVacation.id,
           data: {
             type,
@@ -100,60 +100,44 @@ export function VacationForm({ editVacation, onComplete }: VacationFormProps) {
             endDate,
             reason: reason || undefined,
           },
-        },
-        {
-          onSuccess: () => {
-            toast.success("휴가가 수정되었습니다");
-            onComplete?.();
-          },
-          onError: (error) => {
-            toast.error(
-              error instanceof Error
-                ? error.message
-                : "휴가 수정에 실패했습니다"
-            );
-          },
+        });
+        toast.success("휴가가 수정되었습니다");
+        onComplete?.();
+      } else {
+        // 등록
+        if (!session?.user) {
+          toast.error("로그인이 필요합니다");
+          return;
         }
-      );
-    } else {
-      // 등록
-      if (!session?.user) {
-        toast.error("로그인이 필요합니다");
-        return;
-      }
 
-      createMutation.mutate(
-        {
+        await createMutation.mutateAsync({
           name: session.user.name ?? "",
           githubId: session.user.githubId,
           type,
           startDate,
           endDate,
           reason: reason || undefined,
-        },
-        {
-          onSuccess: () => {
-            toast.success("휴가가 등록되었습니다");
-            // 폼 초기화
-            setType("");
-            setStartDate(format(new Date(), "yyyy-MM-dd"));
-            setEndDate(format(new Date(), "yyyy-MM-dd"));
-            setReason("");
-            setErrors({});
-            onComplete?.();
-            // 등록 완료 후 대시보드로 이동 (등록 페이지에서만)
-            if (!editVacation) {
-              router.push("/");
-            }
-          },
-          onError: (error) => {
-            toast.error(
-              error instanceof Error
-                ? error.message
-                : "휴가 등록에 실패했습니다"
-            );
-          },
+        });
+        toast.success("휴가가 등록되었습니다");
+        // 폼 초기화
+        setType("");
+        setStartDate(format(new Date(), "yyyy-MM-dd"));
+        setEndDate(format(new Date(), "yyyy-MM-dd"));
+        setReason("");
+        setErrors({});
+        onComplete?.();
+        // 등록 완료 후 대시보드로 이동 (등록 페이지에서만)
+        if (!editVacation) {
+          router.push("/");
         }
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : isEditMode
+            ? "휴가 수정에 실패했습니다"
+            : "휴가 등록에 실패했습니다"
       );
     }
   }

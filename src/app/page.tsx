@@ -70,22 +70,20 @@ export default function DashboardPage() {
     setCancelDialogOpen(true);
   }, []);
 
-  const handleCancelConfirm = useCallback(() => {
+  const handleCancelConfirm = useCallback(async () => {
     if (!cancelTarget) return;
-    cancelMutation.mutate(cancelTarget.id, {
-      onSuccess: () => {
-        toast.success("휴가가 취소되었습니다");
-        setCancelDialogOpen(false);
-        setCancelTarget(null);
-      },
-      onError: (error) => {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "휴가 취소에 실패했습니다"
-        );
-      },
-    });
+    try {
+      await cancelMutation.mutateAsync(cancelTarget.id);
+      toast.success("휴가가 취소되었습니다");
+      setCancelDialogOpen(false);
+      setCancelTarget(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "휴가 취소에 실패했습니다"
+      );
+    }
   }, [cancelTarget, cancelMutation]);
 
   // 오늘 휴가자 필터

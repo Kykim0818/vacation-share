@@ -102,8 +102,8 @@ export function useCreateVacation() {
 
   return useMutation({
     mutationFn: postVacation,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.VACATIONS],
       });
     },
@@ -119,8 +119,8 @@ export function useUpdateVacation() {
 
   return useMutation({
     mutationFn: patchVacation,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.VACATIONS],
       });
     },
@@ -136,8 +136,8 @@ export function useCancelVacation() {
 
   return useMutation({
     mutationFn: deleteVacation,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.VACATIONS],
       });
     },
