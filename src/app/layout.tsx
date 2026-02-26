@@ -8,6 +8,10 @@ import { Toaster } from "@/components/ui/sonner";
 export const metadata: Metadata = {
   title: "Vaca-Sync | 팀 휴가 현황",
   description: "GitHub Issues 기반 팀 휴가 현황 대시보드",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/apple-touch-icon.svg",
+  },
 };
 
 export default function RootLayout({
