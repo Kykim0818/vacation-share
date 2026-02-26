@@ -53,6 +53,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // 토큰 갱신 실패 시 재로그인 유도
+    if (session.error === "RefreshTokenError") {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: "인증이 만료되었습니다. 다시 로그인해주세요." },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     const issueNumber = Number(id);
     if (isNaN(issueNumber) || issueNumber <= 0) {
@@ -129,9 +137,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     console.error(`[API] PATCH /api/vacations/[id] 오류:`, error);
     const message =
       error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
+    const isAuthError =
+      message.includes("Bad credentials") ||
+      message.includes("401") ||
+      message.includes("Unauthorized");
     return NextResponse.json<ApiResponse<never>>(
-      { error: message },
-      { status: 500 }
+      { error: isAuthError ? "인증이 만료되었습니다. 다시 로그인해주세요." : message },
+      { status: isAuthError ? 401 : 500 }
     );
   }
 }
@@ -149,6 +161,14 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     if (!session?.accessToken || !session.user?.githubId) {
       return NextResponse.json<ApiResponse<never>>(
         { error: "인증이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    // 토큰 갱신 실패 시 재로그인 유도
+    if (session.error === "RefreshTokenError") {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: "인증이 만료되었습니다. 다시 로그인해주세요." },
         { status: 401 }
       );
     }
@@ -192,9 +212,13 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     console.error(`[API] DELETE /api/vacations/[id] 오류:`, error);
     const message =
       error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
+    const isAuthError =
+      message.includes("Bad credentials") ||
+      message.includes("401") ||
+      message.includes("Unauthorized");
     return NextResponse.json<ApiResponse<never>>(
-      { error: message },
-      { status: 500 }
+      { error: isAuthError ? "인증이 만료되었습니다. 다시 로그인해주세요." : message },
+      { status: isAuthError ? 401 : 500 }
     );
   }
 }

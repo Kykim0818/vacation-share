@@ -22,6 +22,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 토큰 갱신 실패 시 재로그인 유도
+    if (session.error === "RefreshTokenError") {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: "인증이 만료되었습니다. 다시 로그인해주세요." },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month");
 
@@ -50,9 +58,14 @@ export async function GET(request: NextRequest) {
     console.error("[API] GET /api/vacations 오류:", error);
     const message =
       error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
+    // GitHub API 인증 에러 감지 → 401로 전달
+    const isAuthError =
+      message.includes("Bad credentials") ||
+      message.includes("401") ||
+      message.includes("Unauthorized");
     return NextResponse.json<ApiResponse<never>>(
-      { error: message },
-      { status: 500 }
+      { error: isAuthError ? "인증이 만료되었습니다. 다시 로그인해주세요." : message },
+      { status: isAuthError ? 401 : 500 }
     );
   }
 }
@@ -70,6 +83,14 @@ export async function POST(request: NextRequest) {
     if (!session?.accessToken || !session.user?.githubId) {
       return NextResponse.json<ApiResponse<never>>(
         { error: "인증이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    // 토큰 갱신 실패 시 재로그인 유도
+    if (session.error === "RefreshTokenError") {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: "인증이 만료되었습니다. 다시 로그인해주세요." },
         { status: 401 }
       );
     }
@@ -124,9 +145,13 @@ export async function POST(request: NextRequest) {
     console.error("[API] POST /api/vacations 오류:", error);
     const message =
       error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
+    const isAuthError =
+      message.includes("Bad credentials") ||
+      message.includes("401") ||
+      message.includes("Unauthorized");
     return NextResponse.json<ApiResponse<never>>(
-      { error: message },
-      { status: 500 }
+      { error: isAuthError ? "인증이 만료되었습니다. 다시 로그인해주세요." : message },
+      { status: isAuthError ? 401 : 500 }
     );
   }
 }

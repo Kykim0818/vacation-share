@@ -5,6 +5,7 @@ import { AuthProvider } from "@/providers/auth-provider";
 import { Header } from "@/components/layout/header";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { SessionGuard } from "@/components/auth/session-guard";
 
 export const metadata: Metadata = {
   title: "Vaca-Sync | 팀 휴가 현황",
@@ -31,9 +32,11 @@ export default function RootLayout({
         >
 <AuthProvider>
 <QueryProvider>
+<SessionGuard>
 <Header />
 <main>{children}</main>
 <Toaster richColors position="top-right" />
+</SessionGuard>
 </QueryProvider>
         </AuthProvider>
         </ThemeProvider>
