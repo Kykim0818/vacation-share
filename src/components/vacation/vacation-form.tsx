@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ interface VacationFormProps {
 
 export function VacationForm({ editVacation, onComplete }: VacationFormProps) {
   const { data: session } = useSession();
+  const router = useRouter();
   const { data: teamConfig } = useTeam();
   const createMutation = useCreateVacation();
   const updateMutation = useUpdateVacation();
@@ -139,6 +141,10 @@ export function VacationForm({ editVacation, onComplete }: VacationFormProps) {
             setReason("");
             setErrors({});
             onComplete?.();
+            // 등록 완료 후 대시보드로 이동 (등록 페이지에서만)
+            if (!editVacation) {
+              router.push("/");
+            }
           },
           onError: (error) => {
             toast.error(
