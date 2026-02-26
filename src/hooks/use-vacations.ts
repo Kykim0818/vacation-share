@@ -95,7 +95,7 @@ export function useVacations(month: string) {
 
 /**
  * 새 휴가를 등록합니다.
- * 성공 시 휴가 목록 캐시를 무효화합니다.
+ * 성공 시 응답 데이터로 캐시를 직접 업데이트합니다.
  */
 export function useCreateVacation() {
   const queryClient = useQueryClient();
@@ -108,17 +108,13 @@ export function useCreateVacation() {
         { queryKey: [QUERY_KEYS.VACATIONS] },
         (old) => (old ? [...old, newVacation] : [newVacation])
       );
-      // background refetch로 최종 동기화
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.VACATIONS],
-      });
     },
   });
 }
 
 /**
  * 기존 휴가를 수정합니다.
- * 성공 시 휴가 목록 캐시를 무효화합니다.
+ * 성공 시 응답 데이터로 캐시를 직접 업데이트합니다.
  */
 export function useUpdateVacation() {
   const queryClient = useQueryClient();
@@ -134,16 +130,13 @@ export function useUpdateVacation() {
             v.id === updatedVacation.id ? updatedVacation : v
           ) ?? []
       );
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.VACATIONS],
-      });
     },
   });
 }
 
 /**
  * 휴가를 취소합니다 (Issue Close).
- * 성공 시 휴가 목록 캐시를 무효화합니다.
+ * 성공 시 캐시에서 해당 휴가를 제거합니다.
  */
 export function useCancelVacation() {
   const queryClient = useQueryClient();
@@ -156,9 +149,6 @@ export function useCancelVacation() {
         { queryKey: [QUERY_KEYS.VACATIONS] },
         (old) => old?.filter((v) => v.id !== deletedId) ?? []
       );
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.VACATIONS],
-      });
     },
   });
 }
