@@ -33,6 +33,9 @@ function buildAuthConfig(): NextAuthConfig {
   const provider = getAuthProviderConfig();
 
   return {
+    // Vercel 등 리버스 프록시 환경에서 X-Forwarded-Host 헤더를 신뢰
+    trustHost: true,
+
     providers: [
       GitHub({
         clientId: provider.clientId,
