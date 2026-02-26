@@ -22,6 +22,7 @@ interface CalendarCellProps {
   currentMonth: Date;
   bars: VacationBar[];
   maxLanes: number;
+  isExpanded?: boolean;
   onVacationClick: (vacation: Vacation) => void;
 }
 
@@ -32,6 +33,7 @@ export function CalendarCell({
   currentMonth,
   bars,
   maxLanes,
+  isExpanded = false,
   onVacationClick,
 }: CalendarCellProps) {
   const isCurrentMonth = isSameMonth(date, currentMonth);
@@ -50,7 +52,9 @@ export function CalendarCell({
   return (
     <div
       className={cn(
-        "relative flex min-h-[80px] flex-col border-b border-r p-1 text-sm md:min-h-[100px]",
+        isExpanded
+          ? "relative flex min-h-[140px] flex-col border-b border-r p-1.5 md:min-h-[160px]"
+          : "relative flex min-h-[80px] flex-col border-b border-r p-1 text-sm md:min-h-[100px]",
         !isCurrentMonth && "bg-muted/30 text-muted-foreground",
         today && "bg-primary/5"
       )}
@@ -58,7 +62,9 @@ export function CalendarCell({
       {/* 날짜 숫자 */}
       <span
         className={cn(
-          "mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
+          isExpanded
+            ? "mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold"
+            : "mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
           today && "bg-primary text-primary-foreground"
         )}
       >
@@ -74,7 +80,9 @@ export function CalendarCell({
               type="button"
               onClick={() => onVacationClick(bar.vacation)}
               className={cn(
-                "flex h-5 items-center truncate px-1 text-[10px] font-medium leading-tight text-white transition-opacity hover:opacity-80",
+                isExpanded
+                  ? "flex h-7 items-center truncate px-1.5 text-xs font-medium leading-tight text-white transition-opacity hover:opacity-80"
+                  : "flex h-5 items-center truncate px-1 text-[10px] font-medium leading-tight text-white transition-opacity hover:opacity-80",
                 bar.isStart && "rounded-l",
                 bar.isEnd && "rounded-r",
                 !bar.isStart && "-ml-1 pl-0",
@@ -93,11 +101,14 @@ export function CalendarCell({
               )}
             </button>
           ) : (
-            <div key={`empty-${idx}`} className="h-5" />
+            <div key={`empty-${idx}`} className={isExpanded ? "h-7" : "h-5"} />
           )
         )}
         {hiddenCount > 0 && (
-          <span className="mt-auto text-[10px] font-medium text-muted-foreground">
+          <span className={cn(
+            "mt-auto font-medium text-muted-foreground",
+            isExpanded ? "text-xs" : "text-[10px]"
+          )}>
             +{hiddenCount}
           </span>
         )}

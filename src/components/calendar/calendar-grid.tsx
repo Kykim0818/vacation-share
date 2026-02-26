@@ -26,6 +26,7 @@ interface CalendarGridProps {
   vacationTypes: VacationType[] | undefined;
   isLoading: boolean;
   onVacationClick: (vacation: Vacation) => void;
+  isExpanded?: boolean;
 }
 
 /**
@@ -148,6 +149,7 @@ export function CalendarGrid({
   members,
   vacationTypes,
   isLoading,
+  isExpanded = false,
   onVacationClick,
 }: CalendarGridProps) {
   const barMap = useMemo(() => {
@@ -196,7 +198,11 @@ export function CalendarGrid({
         {WEEKDAY_LABELS.map((label, i) => (
           <div
             key={label}
-            className={`flex h-8 items-center justify-center text-xs font-medium ${
+            className={cn(
+              "flex items-center justify-center font-medium",
+              isExpanded ? "h-10 text-sm" : "h-8 text-xs",
+              i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-muted-foreground"
+            )}
               i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-muted-foreground"
             }`}
           >
@@ -218,6 +224,7 @@ export function CalendarGrid({
               currentMonth={currentDate}
               bars={bars}
               maxLanes={maxLanes}
+              isExpanded={isExpanded}
               onVacationClick={onVacationClick}
             />
           );
