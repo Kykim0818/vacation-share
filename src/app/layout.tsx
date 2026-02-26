@@ -4,6 +4,7 @@ import { QueryProvider } from "@/providers/query-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { Header } from "@/components/layout/header";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/providers/theme-provider";
 
 export const metadata: Metadata = {
   title: "Vaca-Sync | 팀 휴가 현황",
@@ -20,15 +21,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
       <body className="min-h-screen font-sans antialiased">
-        <AuthProvider>
-          <QueryProvider>
-            <Header />
-            <main>{children}</main>
-            <Toaster richColors position="top-right" />
-          </QueryProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+<AuthProvider>
+<QueryProvider>
+<Header />
+<main>{children}</main>
+<Toaster richColors position="top-right" />
+</QueryProvider>
         </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -26,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "./theme-toggle";
 
 const NAV_ITEMS = [
   { href: "/", label: "대시보드", icon: LayoutDashboard },
@@ -71,6 +72,9 @@ export function Header() {
         </nav>
 
         <div className="flex-1" />
+        <div className="hidden md:flex md:mr-2">
+          <ThemeToggle />
+        </div>
 
         {/* 사용자 메뉴 (데스크탑) */}
         {session?.user && (
@@ -137,6 +141,11 @@ export function Header() {
       {/* 모바일 메뉴 */}
       {mobileMenuOpen && (
         <div className="border-t md:hidden">
+          <div className="flex items-center justify-between p-2">
+            <span className="text-sm font-medium px-2">테마 설정</span>
+            <ThemeToggle />
+          </div>
+          <Separator />
           <nav className="flex flex-col gap-1 p-2" aria-label="모바일 네비게이션">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
