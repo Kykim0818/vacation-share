@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import {
   useQuery,
   useMutation,
@@ -42,6 +43,22 @@ async function fetchVacations(month: string): Promise<Vacation[]> {
 
   if (!res.ok || json.error) {
     throw new Error(json.error ?? "휴가 목록 조회에 실패했습니다.");
+  }
+
+  return json.data ?? [];
+}
+
+async function fetchMyUpcomingVacations(
+  since: string,
+  githubId: string
+): Promise<Vacation[]> {
+  const res = await fetch(
+    `/api/vacations?since=${since}&memberId=${githubId}`
+  );
+  const json: ApiResponse<Vacation[]> = await res.json();
+
+  if (!res.ok || json.error) {
+    throw new Error(json.error ?? "내 휴가 조회에 실패했습니다.");
   }
 
   return json.data ?? [];
@@ -113,6 +130,23 @@ export function useVacations(month: string) {
 }
 
 /**
+ * 오늘 이후의 내 활성 휴가를 조회합니다.
+ * (진행 중 + 미래 휴가 포함, 과거 휴가 제외)
+ *
+ * @param githubId 본인 GitHub ID
+ */
+export function useMyUpcomingVacations(githubId: string | undefined) {
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  return useQuery({
+    queryKey: [QUERY_KEYS.VACATIONS, "my-upcoming", githubId],
+    queryFn: () => fetchMyUpcomingVacations(today, githubId!),
+    staleTime: CACHE_TIMES.VACATIONS,
+    enabled: !!githubId,
+  });
+}
+
+/**
  * 새 휴가를 등록합니다.
  * 성공 시 응답 데이터로 캐시를 직접 업데이트합니다.
  */
@@ -137,6 +171,10 @@ export function useCreateVacation() {
           if (list.some((v) => v.id === newVacation.id)) return list;
           return [...list, newVacation];
         });
+      });
+      // 내 휴가 (my-upcoming) 캐시 갱신
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.VACATIONS, "my-upcoming"],
       });
     },
   });
@@ -177,6 +215,10 @@ export function useUpdateVacation() {
           return list.filter((v) => v.id !== updatedVacation.id);
         });
       });
+      // 내 휴가 (my-upcoming) 캐시 갱신
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.VACATIONS, "my-upcoming"],
+      });
     },
   });
 }
@@ -196,6 +238,10 @@ export function useCancelVacation() {
         { queryKey: [QUERY_KEYS.VACATIONS] },
         (old) => old?.filter((v) => v.id !== deletedId) ?? []
       );
+      // 내 휴가 (my-upcoming) 캐시 갱신
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.VACATIONS, "my-upcoming"],
+      });
     },
   });
 }

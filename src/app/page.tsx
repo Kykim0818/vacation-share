@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, compareAsc } from "date-fns";
 import { useSession } from "next-auth/react";
 
-import { useVacations, useCancelVacation } from "@/hooks/use-vacations";
+import { useVacations, useMyUpcomingVacations, useCancelVacation } from "@/hooks/use-vacations";
 import { useTeam } from "@/hooks/use-team";
 import { TodaySummary } from "@/components/dashboard/today-summary";
 import { VacationCard } from "@/components/dashboard/vacation-card";
@@ -41,6 +41,11 @@ export default function DashboardPage() {
     error: teamError,
     refetch: refetchTeam,
   } = useTeam();
+
+  const {
+    data: myUpcomingVacations,
+    isLoading: myVacationsLoading,
+  } = useMyUpcomingVacations(session?.user?.githubId);
 
   const isLoading = vacationsLoading || teamLoading;
 
@@ -102,13 +107,13 @@ export default function DashboardPage() {
       );
     });
   }, [vacations]);
-  // 내 휴가 필터
+  // 내 휴가: 오늘 이후 활성 휴가 (별도 API 조회, 월 제한 없음)
   const myVacations = useMemo(() => {
-    if (!vacations || !session?.user?.githubId) return [];
-    return vacations
-      .filter((v) => v.githubId === session.user?.githubId)
-      .sort((a, b) => compareAsc(parseISO(a.startDate), parseISO(b.startDate)));
-  }, [vacations, session]);
+    if (!myUpcomingVacations) return [];
+    return [...myUpcomingVacations].sort((a, b) =>
+      compareAsc(parseISO(a.startDate), parseISO(b.startDate))
+    );
+  }, [myUpcomingVacations]);
 
 
   const getMember = (githubId: string) =>
@@ -220,7 +225,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {(isLoading || myVacationsLoading) ? (
               <div className="space-y-3">
                 <Skeleton className="h-20 w-full" />
                 <Skeleton className="h-20 w-full" />
