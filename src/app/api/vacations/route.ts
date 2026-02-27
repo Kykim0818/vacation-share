@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
-import { listVacations, createVacation, fetchTeamConfig } from "@/lib/github/issues";
+import { listVacations, listVacationsSince, createVacation, fetchTeamConfig } from "@/lib/github/issues";
 import { createVacationSchema } from "@/lib/schemas";
 import type { ApiResponse, Vacation } from "@/lib/types";
 
 /**
  * GET /api/vacations
  *
- * 쿼리 파라미터:
- * - month (필수): YYYY-MM 형식
+ * 쿼리 파라미터 (month 또는 since 중 하나 필수):
+ * - month (YYYY-MM): 특정 월의 휴가 조회
+ * - since (YYYY-MM-DD): 해당 날짜 이후의 휴가 조회 (endDate >= since)
  * - memberId (선택): 특정 멤버 필터
  * - type (선택): 특정 휴가 유형 필터
  */
@@ -32,15 +33,42 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month");
+    const since = searchParams.get("since");
 
-    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+    // month 또는 since 중 하나만 허용
+    if (month && since) {
       return NextResponse.json<ApiResponse<never>>(
-        { error: "month 파라미터가 필요합니다. (형식: YYYY-MM)" },
+        { error: "month와 since 파라미터를 동시에 사용할 수 없습니다." },
         { status: 400 }
       );
     }
 
-    let vacations = await listVacations(month, session.accessToken);
+    if (!month && !since) {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: "month 또는 since 파라미터가 필요합니다." },
+        { status: 400 }
+      );
+    }
+
+    let vacations: Vacation[];
+
+    if (month) {
+      if (!/^\d{4}-\d{2}$/.test(month)) {
+        return NextResponse.json<ApiResponse<never>>(
+          { error: "month 형식이 올바르지 않습니다. (형식: YYYY-MM)" },
+          { status: 400 }
+        );
+      }
+      vacations = await listVacations(month, session.accessToken);
+    } else {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(since!)) {
+        return NextResponse.json<ApiResponse<never>>(
+          { error: "since 형식이 올바르지 않습니다. (형식: YYYY-MM-DD)" },
+          { status: 400 }
+        );
+      }
+      vacations = await listVacationsSince(since!, session.accessToken);
+    }
 
     // 선택적 필터링
     const memberId = searchParams.get("memberId");

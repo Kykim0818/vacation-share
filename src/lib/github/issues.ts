@@ -80,6 +80,59 @@ export async function listVacations(
 }
 
 /**
+ * 특정 날짜 이후의 휴가 목록을 조회합니다.
+ *
+ * - Open 상태의 Issue만 조회
+ * - "vacation/*" 라벨이 붙은 Issue만 필터
+ * - endDate >= sinceDate 인 휴가만 반환 (진행 중인 휴가 포함)
+ *
+ * @param sinceDate 시작 기준 날짜 (YYYY-MM-DD 형식)
+ * @param userAccessToken OAuth App 폴백 시 사용할 사용자 토큰
+ */
+export async function listVacationsSince(
+  sinceDate: string,
+  userAccessToken?: string
+): Promise<Vacation[]> {
+  const octokit = getOctokitForRead(userAccessToken);
+  const { owner, repo } = getRepoInfo();
+
+  const issues = await octokit.paginate(octokit.rest.issues.listForRepo, {
+    owner,
+    repo,
+    state: "open",
+    per_page: 100,
+  });
+
+  const vacations: Vacation[] = [];
+
+  for (const issue of issues) {
+    if ("pull_request" in issue && issue.pull_request) continue;
+
+    const hasVacationLabel = issue.labels.some((label) => {
+      const labelName = typeof label === "string" ? label : label.name;
+      return labelName?.startsWith(VACATION_LABEL_PREFIX);
+    });
+    if (!hasVacationLabel) continue;
+
+    const vacation = parseVacationIssue({
+      number: issue.number,
+      body: issue.body ?? null,
+      html_url: issue.html_url,
+      created_at: issue.created_at,
+      state: issue.state ?? "open",
+    });
+    if (!vacation) continue;
+
+    // endDate가 sinceDate 이후인 휴가만 포함 (진행 중 + 미래 휴가)
+    if (vacation.endDate >= sinceDate) {
+      vacations.push(vacation);
+    }
+  }
+
+  return vacations;
+}
+
+/**
  * 특정 Issue 번호로 휴가를 조회합니다.
  */
 export async function getVacation(
