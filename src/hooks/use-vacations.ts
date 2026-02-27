@@ -21,7 +21,10 @@ import type {
 function getMonthFromQueryKey(queryKey: unknown): string | null {
   if (!Array.isArray(queryKey)) return null;
   if (queryKey[0] !== QUERY_KEYS.VACATIONS) return null;
-  return typeof queryKey[1] === "string" ? queryKey[1] : null;
+  // my-upcoming 등 비-월 키는 제외 (YYYY-MM 형식만 허용)
+  const second = queryKey[1];
+  if (typeof second !== "string" || !/^\d{4}-\d{2}$/.test(second)) return null;
+  return second;
 }
 
 function isVacationInMonth(vacation: Vacation, month: string): boolean {
@@ -172,10 +175,16 @@ export function useCreateVacation() {
           return [...list, newVacation];
         });
       });
-      // 내 휴가 (my-upcoming) 캐시 갱신
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.VACATIONS, "my-upcoming"],
-      });
+
+      // 내 휴가 (my-upcoming) 캐시 직접 추가
+      queryClient.setQueriesData<Vacation[]>(
+        { queryKey: [QUERY_KEYS.VACATIONS, "my-upcoming"] },
+        (old) => {
+          const list = old ?? [];
+          if (list.some((v) => v.id === newVacation.id)) return list;
+          return [...list, newVacation];
+        }
+      );
     },
   });
 }
@@ -215,10 +224,24 @@ export function useUpdateVacation() {
           return list.filter((v) => v.id !== updatedVacation.id);
         });
       });
-      // 내 휴가 (my-upcoming) 캐시 갱신
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.VACATIONS, "my-upcoming"],
-      });
+
+      // 내 휴가 (my-upcoming) 캐시 직접 교체
+      queryClient.setQueriesData<Vacation[]>(
+        { queryKey: [QUERY_KEYS.VACATIONS, "my-upcoming"] },
+        (old) => {
+          const list = old ?? [];
+          const today = format(new Date(), "yyyy-MM-dd");
+          // 수정된 휴가가 오늘 이후면 교체, 아니면 제거
+          if (updatedVacation.endDate >= today) {
+            const exists = list.some((v) => v.id === updatedVacation.id);
+            if (!exists) return [...list, updatedVacation];
+            return list.map((v) =>
+              v.id === updatedVacation.id ? updatedVacation : v
+            );
+          }
+          return list.filter((v) => v.id !== updatedVacation.id);
+        }
+      );
     },
   });
 }
@@ -233,15 +256,25 @@ export function useCancelVacation() {
   return useMutation({
     mutationFn: deleteVacation,
     onSuccess: (_data, deletedId) => {
-      // 모든 월 캐시에서 해당 휴가 제거
+      // 모든 월별 캐시에서 해당 휴가 제거 (my-upcoming 제외 — getMonthFromQueryKey로 필터됨)
+      const entries = queryClient.getQueriesData<Vacation[]>({
+        queryKey: [QUERY_KEYS.VACATIONS],
+      });
+
+      entries.forEach(([queryKey]) => {
+        const month = getMonthFromQueryKey(queryKey);
+        if (!month) return;
+
+        queryClient.setQueryData<Vacation[]>(queryKey, (current) =>
+          current?.filter((v) => v.id !== deletedId) ?? []
+        );
+      });
+
+      // 내 휴가 (my-upcoming) 캐시에서 직접 제거
       queryClient.setQueriesData<Vacation[]>(
-        { queryKey: [QUERY_KEYS.VACATIONS] },
+        { queryKey: [QUERY_KEYS.VACATIONS, "my-upcoming"] },
         (old) => old?.filter((v) => v.id !== deletedId) ?? []
       );
-      // 내 휴가 (my-upcoming) 캐시 갱신
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.VACATIONS, "my-upcoming"],
-      });
     },
   });
 }
