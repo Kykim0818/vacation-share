@@ -14,6 +14,25 @@ import type {
 } from "@/lib/types";
 
 // ============================================================
+// 캐시 유틸리티
+// ============================================================
+
+function getMonthFromQueryKey(queryKey: unknown): string | null {
+  if (!Array.isArray(queryKey)) return null;
+  if (queryKey[0] !== QUERY_KEYS.VACATIONS) return null;
+  return typeof queryKey[1] === "string" ? queryKey[1] : null;
+}
+
+function isVacationInMonth(vacation: Vacation, month: string): boolean {
+  const [year, mon] = month.split("-").map(Number);
+  const lastDay = new Date(year, mon, 0).getDate();
+  const monthStart = `${month}-01`;
+  const monthEnd = `${month}-${String(lastDay).padStart(2, "0")}`;
+
+  return vacation.startDate <= monthEnd && vacation.endDate >= monthStart;
+}
+
+// ============================================================
 // API 호출 함수
 // ============================================================
 
@@ -103,11 +122,22 @@ export function useCreateVacation() {
   return useMutation({
     mutationFn: postVacation,
     onSuccess: (newVacation) => {
-      // 캐시에 새 휴가 직접 추가 (모든 월별 쿼리에)
-      queryClient.setQueriesData<Vacation[]>(
-        { queryKey: [QUERY_KEYS.VACATIONS] },
-        (old) => (old ? [...old, newVacation] : [newVacation])
-      );
+      // 월 범위에 포함되는 캐시에만 새 휴가 추가
+      const entries = queryClient.getQueriesData<Vacation[]>({
+        queryKey: [QUERY_KEYS.VACATIONS],
+      });
+
+      entries.forEach(([queryKey]) => {
+        const month = getMonthFromQueryKey(queryKey);
+        if (!month) return;
+
+        queryClient.setQueryData<Vacation[]>(queryKey, (current) => {
+          const list = current ?? [];
+          if (!isVacationInMonth(newVacation, month)) return list;
+          if (list.some((v) => v.id === newVacation.id)) return list;
+          return [...list, newVacation];
+        });
+      });
     },
   });
 }
@@ -122,14 +152,31 @@ export function useUpdateVacation() {
   return useMutation({
     mutationFn: patchVacation,
     onSuccess: (updatedVacation) => {
-      // 캐시 내 해당 휴가를 응답 데이터로 교체
-      queryClient.setQueriesData<Vacation[]>(
-        { queryKey: [QUERY_KEYS.VACATIONS] },
-        (old) =>
-          old?.map((v) =>
-            v.id === updatedVacation.id ? updatedVacation : v
-          ) ?? []
-      );
+      // 월 범위에 맞춰 해당 휴가를 교체/제거
+      const entries = queryClient.getQueriesData<Vacation[]>({
+        queryKey: [QUERY_KEYS.VACATIONS],
+      });
+
+      entries.forEach(([queryKey]) => {
+        const month = getMonthFromQueryKey(queryKey);
+        if (!month) return;
+
+        queryClient.setQueryData<Vacation[]>(queryKey, (current) => {
+          const list = current ?? [];
+          const inMonth = isVacationInMonth(updatedVacation, month);
+          const exists = list.some((v) => v.id === updatedVacation.id);
+
+          if (inMonth) {
+            if (!exists) return [...list, updatedVacation];
+            return list.map((v) =>
+              v.id === updatedVacation.id ? updatedVacation : v
+            );
+          }
+
+          if (!exists) return list;
+          return list.filter((v) => v.id !== updatedVacation.id);
+        });
+      });
     },
   });
 }
@@ -144,7 +191,7 @@ export function useCancelVacation() {
   return useMutation({
     mutationFn: deleteVacation,
     onSuccess: (_data, deletedId) => {
-      // 캐시에서 해당 휴가 제거
+      // 모든 월 캐시에서 해당 휴가 제거
       queryClient.setQueriesData<Vacation[]>(
         { queryKey: [QUERY_KEYS.VACATIONS] },
         (old) => old?.filter((v) => v.id !== deletedId) ?? []
